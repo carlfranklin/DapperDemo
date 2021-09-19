@@ -1,0 +1,141 @@
+﻿@page "/"
+@inject DapperRepository<Customer> CustomerManager
+
+@if (Customers != null)
+{
+    <select @onchange="CustomerSelected" size="10" style="width:100%;">
+        @foreach (var customer in Customers)
+        {
+            if (SelectedCustomer != null && customer.CustomerId == SelectedCustomer.CustomerId)
+            {
+                <option selected value="@customer.CustomerId">@customer.FirstName&nbsp;@customer.LastName</option>
+            }
+            else
+            {
+                <option value="@customer.CustomerId">@customer.FirstName&nbsp;@customer.LastName</option>
+            }
+        }
+    </select>
+    <br />
+    <br />
+
+    @if (CanIAddCarl)
+    {
+        <button @onclick="AddCustomer">Add Carl</button>
+        <br />
+        <br />
+    }
+
+    if (SelectedCustomer != null)
+    {
+        <div>
+            Address: @SelectedCustomer.Address
+        </div>
+        <br />
+
+        <button @onclick="DeleteCustomer">Delete @SelectedCustomer.FirstName  @SelectedCustomer.LastName</button>
+        <br />
+        <br />
+
+        <button @onclick="UpdateCustomer">Update @SelectedCustomer.FirstName  @SelectedCustomer.LastName</button>
+        <br />
+        <br />
+    }
+
+    <span style="color:red;">@ErrorMessage</span>
+}
+else
+{
+    <span>Loading...</span>
+}
+
+@code
+{
+    List<Customer> Customers { get; set; }
+    Customer SelectedCustomer;
+    string ErrorMessage = "";
+
+    bool CanIAddCarl
+    {
+        get
+        {
+            var carl = (from x in Customers
+                        where x.FirstName == "Carl"
+                        && x.LastName == "Franklin"
+                        select x).FirstOrDefault();
+            return (carl == null);
+        }
+    }
+
+    async Task CustomerSelected(ChangeEventArgs args)
+    {
+        var Id = Convert.ToInt32(args.Value.ToString());
+        SelectedCustomer = (from x in Customers where x.CustomerId == Id select x).FirstOrDefault();
+        var dbCust = (await CustomerManager.Get(x => x.CustomerId == Id)).FirstOrDefault();
+    }
+
+    async Task UpdateCustomer()
+    {
+        ErrorMessage = "";
+        SelectedCustomer.Address = $"Updated at {DateTime.Now.ToString()}";
+        var updated = await CustomerManager.Update(SelectedCustomer);
+        if (updated == null)
+        {
+            ErrorMessage = "Could not update Customer";
+        }
+    }
+
+    async Task AddCustomer()
+    {
+        ErrorMessage = "";
+        var customer = new Customer()
+        {
+            Address = "Nowhere Street",
+            City = "Hooverville",
+            Company = "Acme",
+            Country = "USA",
+            Email = "carl@somewhere.com",
+            Fax = "888-555-1212",
+            FirstName = "Carl",
+            LastName = "Franklin",
+            Phone = "888-555-1212",
+            PostalCode = "ABCDE",
+            State = "XX"
+        };
+        var newCustomer = await CustomerManager.Insert(customer);
+        if (newCustomer != null)
+            await LoadAllCustomers();
+        else
+            ErrorMessage = "Could not insert customer";
+    }
+
+    async Task DeleteCustomer()
+    {
+        ErrorMessage = "";
+        var success = await CustomerManager.Delete(SelectedCustomer);
+        if (success)
+        {
+            SelectedCustomer = null;
+            await LoadAllCustomers();
+        }
+        else
+        {
+            ErrorMessage = "Customer could not be deleted";
+        }
+    }
+
+    async Task LoadAllCustomers()
+    {
+        //Customers = (await CustomerManager.GetAll()).ToList();
+
+        // Get Customers Sorted by Last Name
+        Customers = (await CustomerManager.Get(x => x.CustomerId > 0,
+            q => q.OrderBy(s => s.LastName))).ToList();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllCustomers();
+    }
+
+}
