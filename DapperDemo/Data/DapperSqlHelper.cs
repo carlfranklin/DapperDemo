@@ -46,6 +46,8 @@ namespace DapperDemo.Data
             // let's get the SQL string started.
             string sql = $"insert into {TableName} (";
             
+            // insert into Customer (FirstName, LastName) values (@FirstName, @LastName)
+
             // Get the type, and the list of public properties
             var EntityType = Entity.GetType();
             var Properties = EntityType.GetProperties();

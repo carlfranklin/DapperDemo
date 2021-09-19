@@ -14,16 +14,13 @@ namespace DapperDemo.Data
     public class DataContext<TEntity> : IDisposable where TEntity: class
     {
         private readonly SqlConnection _connection;
-        private readonly IConfiguration _config;
         private Linq2Dapper<TEntity> _data;
 
         public Linq2Dapper<TEntity> Data =>
              _data ?? (_data = CreateObject<TEntity>());
 
-        public DataContext(IConfiguration config)
+        public DataContext(string sqlConnectionString)
         {
-            _config = config;
-            var sqlConnectionString = _config.GetConnectionString("ChinnokConnectionString");
             _connection = new SqlConnection(sqlConnectionString);
         }
 

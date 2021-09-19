@@ -1,16 +1,22 @@
 ﻿@page "/counter"
+@inject DapperRepository<Instrument> InstrumentManager
 
-<h1>Counter</h1>
-
-<p>Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="Test">Click me</button>
 
 @code {
-    private int currentCount = 0;
 
-    private void IncrementCount()
+    async Task Test()
     {
-        currentCount++;
+        // get all
+        var instruments = await InstrumentManager.GetAll();
+
+        // add new
+        var instrument = new Instrument() { Name = DateTime.Now.ToString() };
+        var added = await InstrumentManager.Insert(instrument);
+
+        added.Name = $"Updated at {DateTime.Now.ToString()}";
+        await InstrumentManager.Update(added);
+
+        await InstrumentManager.Delete(added);
     }
 }

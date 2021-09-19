@@ -30,8 +30,21 @@ namespace DapperDemo
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddSingleton<WeatherForecastService>();
-            services.AddSingleton<DapperRepository<Customer>>();
-            services.AddSingleton<DataContext<Customer>>();
+            
+            services.AddSingleton<DapperRepository<Customer>>(s =>
+                new DapperRepository<Customer>(
+                    new DataContext<Customer>(Configuration.GetConnectionString("ChinnokConnectionString")),
+                    Configuration.GetConnectionString("ChinnokConnectionString")));
+
+            services.AddSingleton<DapperRepository<Instrument>>(s =>
+                new DapperRepository<Instrument>(
+                    new DataContext<Instrument>(Configuration.GetConnectionString("BandBookerConnectionString")),
+                    Configuration.GetConnectionString("BandBookerConnectionString")));
+
+            services.AddSingleton<DapperRepository<Customers>>(s =>
+                new DapperRepository<Customers>(
+                    new DataContext<Customers>(Configuration.GetConnectionString("NorthwindConnectionString")),
+                    Configuration.GetConnectionString("NorthwindConnectionString")));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

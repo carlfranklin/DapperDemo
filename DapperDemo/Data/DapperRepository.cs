@@ -14,23 +14,21 @@ namespace DapperDemo.Data
 {
     public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
     {
-        private readonly IConfiguration _config;
         private DataContext<TEntity> _dataContext;
-        private string sqlConnectionString;
+        private string _sqlConnectionString;
         private string entityName;
         private string primaryKeyName;
         private string primaryKeyType;
         private bool PKNotIdentity = false;
         private Type entityType;
 
-        public DapperRepository(IConfiguration config, DataContext<TEntity> dataContext)
+        public DapperRepository(DataContext<TEntity> dataContext, string sqlConnectionString)
         {
-            _config = config;
             _dataContext = dataContext;
-            sqlConnectionString = _config.GetConnectionString("ChinnokConnectionString");
+            _sqlConnectionString = sqlConnectionString;
             entityType = typeof(TEntity);
             entityName = entityType.Name;
-            
+
             var props = entityType.GetProperties().Where(
                 prop => Attribute.IsDefined(prop,
                 typeof(KeyAttribute)));
@@ -60,7 +58,7 @@ namespace DapperDemo.Data
 
         public async Task<bool> Delete(TEntity entityToDelete)
         {
-            using (IDbConnection db = new SqlConnection(sqlConnectionString))
+            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
                 //string sql = $"delete from {entityName} where {primaryKeyName}" +
                 //    $" = @{primaryKeyName}";
@@ -78,8 +76,8 @@ namespace DapperDemo.Data
 
         }
 
-        public async Task<IEnumerable<TEntity>> Get(Expression<Func<TEntity, bool>> filter = null, 
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null, 
+        public async Task<IEnumerable<TEntity>> Get(Expression<Func<TEntity, bool>> filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = "")
         {
             try
@@ -119,7 +117,7 @@ namespace DapperDemo.Data
 
         public async Task<IEnumerable<TEntity>> GetAll()
         {
-            using (IDbConnection db = new SqlConnection(sqlConnectionString))
+            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
                 db.Open();
                 //string sql = $"select * from {entityName}";
@@ -131,34 +129,52 @@ namespace DapperDemo.Data
 
         public async Task<TEntity> Insert(TEntity entity)
         {
-            using (IDbConnection db = new SqlConnection(sqlConnectionString))
+            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
                 db.Open();
+                // start a transaction in case something goes wrong
                 await db.ExecuteAsync("begin transaction");
                 try
                 {
-                    //string sql = DapperSqlHelper.GetDapperInsertStatement(entity, entityName);
-                    //var id = await db.ExecuteAsync(sql, entity);
+                    // Get the primary key property
                     var prop = entityType.GetProperty(primaryKeyName);
 
-                    if (PKNotIdentity == true && primaryKeyType == "Int32")
+                    // int key?
+                    if (primaryKeyType == "Int32")
                     {
-                        var sql = $"select max({primaryKeyName}) from {entityName}";
-                        var Id = Convert.ToInt32(db.ExecuteScalar(sql)) + 1;
-                        prop.SetValue(entity, Id);
-                        db.Insert<TEntity>(entity);
+                        // not an identity?
+                        if (PKNotIdentity == true)
+                        {
+                            // get the highest value
+                            var sql = $"select max({primaryKeyName}) from {entityName}";
+                            // and add 1 to it
+                            var Id = Convert.ToInt32(db.ExecuteScalar(sql)) + 1;
+                            // update the entity
+                            prop.SetValue(entity, Id);
+                            // do the insert
+                            db.Insert<TEntity>(entity);
+                        }
+                        else
+                        {
+                            // key will be created by the database
+                            var Id = (int)db.Insert<TEntity>(entity);
+                            // set the value
+                            prop.SetValue(entity, Id);
+                        }
                     }
-                    else
+                    else if (primaryKeyType == "String")
                     {
-                        var Id = db.Insert<TEntity>(entity);
-                        prop.SetValue(entity, Id);
+                        // string primary key. Use my helper
+                        string sql = DapperSqlHelper.GetDapperInsertStatement(entity, entityName);
+                        await db.ExecuteAsync(sql, entity);
                     }
-
+                    // if we got here, we're good!
                     await db.ExecuteAsync("commit transaction");
                     return entity;
                 }
                 catch (Exception ex)
                 {
+                    var msg = ex.Message;
                     await db.ExecuteAsync("rollback transaction");
                     return null;
                 }
@@ -167,7 +183,7 @@ namespace DapperDemo.Data
 
         public async Task<TEntity> Update(TEntity entity)
         {
-            using (IDbConnection db = new SqlConnection(sqlConnectionString))
+            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
                 db.Open();
                 try
