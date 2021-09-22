@@ -9,23 +9,26 @@ using System.Threading.Tasks;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using System.Data;
+using Dapper.Contrib.Linq2Dapper;
 
 namespace DapperDemo.Data
 {
     public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
     {
-        private DataContext<TEntity> _dataContext;
+        private Linq2Dapper<TEntity> linq2Dapper;
+        
         private string _sqlConnectionString;
         private string entityName;
+        private Type entityType;
+
         private string primaryKeyName;
         private string primaryKeyType;
         private bool PKNotIdentity = false;
-        private Type entityType;
 
-        public DapperRepository(DataContext<TEntity> dataContext, string sqlConnectionString)
+        public DapperRepository(string sqlConnectionString)
         {
-            _dataContext = dataContext;
             _sqlConnectionString = sqlConnectionString;
+            linq2Dapper = new Linq2Dapper<TEntity>(new SqlConnection(sqlConnectionString));
             entityType = typeof(TEntity);
             entityName = entityType.Name;
 
@@ -76,14 +79,15 @@ namespace DapperDemo.Data
 
         }
 
-        public async Task<IEnumerable<TEntity>> Get(Expression<Func<TEntity, bool>> filter = null,
+        public async Task<IEnumerable<TEntity>> Get(Expression<Func<TEntity, bool>> 
+            filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = "")
         {
             try
             {
                 // Get the dbSet from the Entity passed in                
-                IQueryable<TEntity> query = _dataContext.Data;
+                IQueryable<TEntity> query = linq2Dapper;
 
                 // Apply the filter
                 if (filter != null)
