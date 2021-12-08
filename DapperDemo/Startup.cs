@@ -29,7 +29,6 @@ namespace DapperDemo
         {
             services.AddRazorPages();
             services.AddServerSideBlazor();
-            services.AddSingleton<WeatherForecastService>();
             
             services.AddSingleton<DapperRepository<Customer>>(s =>
                 new DapperRepository<Customer>(

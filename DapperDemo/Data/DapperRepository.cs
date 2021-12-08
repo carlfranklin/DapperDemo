@@ -9,14 +9,11 @@ using System.Threading.Tasks;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using System.Data;
-using Dapper.Contrib.Linq2Dapper;
 
 namespace DapperDemo.Data
 {
     public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
     {
-        private Linq2Dapper<TEntity> linq2Dapper;
-        
         private string _sqlConnectionString;
         private string entityName;
         private Type entityType;
@@ -28,7 +25,6 @@ namespace DapperDemo.Data
         public DapperRepository(string sqlConnectionString)
         {
             _sqlConnectionString = sqlConnectionString;
-            linq2Dapper = new Linq2Dapper<TEntity>(new SqlConnection(sqlConnectionString));
             entityType = typeof(TEntity);
             entityName = entityType.Name;
 
@@ -59,7 +55,7 @@ namespace DapperDemo.Data
             }
         }
 
-        public async Task<bool> Delete(TEntity entityToDelete)
+        public async Task<bool> DeleteAsync(TEntity entityToDelete)
         {
             using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
@@ -79,47 +75,30 @@ namespace DapperDemo.Data
 
         }
 
-        public async Task<IEnumerable<TEntity>> Get(Expression<Func<TEntity, bool>> 
+        public async Task<IEnumerable<TEntity>> GetAsync(string Query)
+        {
+            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+            {
+                try
+                {
+                    return await db.QueryAsync<TEntity>(Query);
+                }
+                catch (Exception ex)
+                {
+                    return (IEnumerable<TEntity>)new List<TEntity>();
+                }
+            }
+        }
+
+        public async Task<IEnumerable<TEntity>> GetAsync(Expression<Func<TEntity, bool>> 
             filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = "")
         {
-            try
-            {
-                // Get the dbSet from the Entity passed in                
-                IQueryable<TEntity> query = linq2Dapper;
-
-                // Apply the filter
-                if (filter != null)
-                {
-                    query = query.Where(filter);
-                }
-
-                // Include the specified properties
-                foreach (var includeProperty in includeProperties.Split
-                    (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    query = query.Include(includeProperty);
-                }
-
-                // Sort
-                if (orderBy != null)
-                {
-                    return orderBy(query).ToList();
-                }
-                else
-                {
-                    return query.ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                var msg = ex.Message;
-                return null;
-            }
+            throw new NotImplementedException();
         }
 
-        public async Task<IEnumerable<TEntity>> GetAll()
+        public async Task<IEnumerable<TEntity>> GetAllAsync()
         {
             using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
@@ -131,7 +110,7 @@ namespace DapperDemo.Data
             }
         }
 
-        public async Task<TEntity> Insert(TEntity entity)
+        public async Task<TEntity> InsertAsync(TEntity entity)
         {
             using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {
@@ -185,7 +164,7 @@ namespace DapperDemo.Data
             }
         }
 
-        public async Task<TEntity> Update(TEntity entity)
+        public async Task<TEntity> UpdateAsync(TEntity entity)
         {
             using (IDbConnection db = new SqlConnection(_sqlConnectionString))
             {

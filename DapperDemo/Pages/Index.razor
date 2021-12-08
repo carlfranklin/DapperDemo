@@ -71,14 +71,14 @@ else
     {
         var Id = Convert.ToInt32(args.Value.ToString());
         SelectedCustomer = (from x in Customers where x.CustomerId == Id select x).FirstOrDefault();
-        var dbCust = (await CustomerManager.Get(x => x.CustomerId == Id)).FirstOrDefault();
+        var dbCust = (await CustomerManager.GetAsync($"select * from customer where customerid = {Id}")).FirstOrDefault();
     }
 
     async Task UpdateCustomer()
     {
         ErrorMessage = "";
         SelectedCustomer.Address = $"Updated at {DateTime.Now.ToString()}";
-        var updated = await CustomerManager.Update(SelectedCustomer);
+        var updated = await CustomerManager.UpdateAsync(SelectedCustomer);
         if (updated == null)
         {
             ErrorMessage = "Could not update Customer";
@@ -102,7 +102,7 @@ else
             PostalCode = "ABCDE",
             State = "XX"
         };
-        var newCustomer = await CustomerManager.Insert(customer);
+        var newCustomer = await CustomerManager.InsertAsync(customer);
         if (newCustomer != null)
             await LoadAllCustomers();
         else
@@ -112,7 +112,7 @@ else
     async Task DeleteCustomer()
     {
         ErrorMessage = "";
-        var success = await CustomerManager.Delete(SelectedCustomer);
+        var success = await CustomerManager.DeleteAsync(SelectedCustomer);
         if (success)
         {
             SelectedCustomer = null;
@@ -126,11 +126,19 @@ else
 
     async Task LoadAllCustomers()
     {
-        //Customers = (await CustomerManager.GetAll()).ToList();
+        await Task.Delay(0);
+
+        // Get all customers
+        //var result = await CustomerManager.GetAll();
+
+        // Get Customers that start with B
+        //var result = await CustomerManager.Get("select * from customer where lastname like 'b%' order by lastname");
 
         // Get Customers Sorted by Last Name
-        Customers = (await CustomerManager.Get(x => x.CustomerId > 0,
-            q => q.OrderBy(s => s.LastName))).ToList();
+        var result = await CustomerManager.GetAsync("select * from customer order by lastname");
+
+        Customers = result.ToList();
+
     }
 
     protected override async Task OnInitializedAsync()

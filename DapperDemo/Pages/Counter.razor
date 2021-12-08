@@ -8,15 +8,15 @@
     async Task Test()
     {
         // get all
-        var instruments = await InstrumentManager.GetAll();
+        var instruments = await InstrumentManager.GetAllAsync();
 
         // add new
         var instrument = new Instrument() { Name = DateTime.Now.ToString() };
-        var added = await InstrumentManager.Insert(instrument);
+        var added = await InstrumentManager.InsertAsync(instrument);
 
         added.Name = $"Updated at {DateTime.Now.ToString()}";
-        await InstrumentManager.Update(added);
+        await InstrumentManager.UpdateAsync(added);
 
-        await InstrumentManager.Delete(added);
+        await InstrumentManager.DeleteAsync(added);
     }
 }

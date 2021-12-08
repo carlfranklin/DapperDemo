@@ -7,12 +7,13 @@ using System.Threading.Tasks;
 
 public interface IRepository<TEntity> where TEntity : class
 {
-    Task<IEnumerable<TEntity>> GetAll();
-    Task<IEnumerable<TEntity>> Get(
+    Task<IEnumerable<TEntity>> GetAllAsync();
+    Task<IEnumerable<TEntity>> GetAsync(string query);
+    Task<IEnumerable<TEntity>> GetAsync(
         Expression<Func<TEntity, bool>> filter = null,
         Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
         string includeProperties = "");
-    Task<TEntity> Insert(TEntity entity);
-    Task<TEntity> Update(TEntity entityToUpdate);
-    Task<bool> Delete(TEntity entityToDelete);
+    Task<TEntity> InsertAsync(TEntity entity);
+    Task<TEntity> UpdateAsync(TEntity entityToUpdate);
+    Task<bool> DeleteAsync(TEntity entityToDelete);
 }

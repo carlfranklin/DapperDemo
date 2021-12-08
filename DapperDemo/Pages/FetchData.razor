@@ -8,7 +8,7 @@
     async Task Test()
     {
         // get all
-        var customers = await CustomersManager.GetAll();
+        var customers = await CustomersManager.GetAllAsync();
 
         // add new
         var customer = new Customers()
@@ -17,12 +17,12 @@
             CompanyName = DateTime.Now.ToString()
         };
 
-        var added = await CustomersManager.Insert(customer);
+        var added = await CustomersManager.InsertAsync(customer);
 
         added.CompanyName = $"Updated at {DateTime.Now.ToString()}";
-        await CustomersManager.Update(added);
+        await CustomersManager.UpdateAsync(added);
 
-        await CustomersManager.Delete(added);
+        await CustomersManager.DeleteAsync(added);
     }
 }
 
