@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,176 +8,173 @@ using Dapper;
 using Dapper.Contrib.Extensions;
 using System.Data;
 
-namespace DapperDemo.Data
+public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
 {
-    public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
+    private string _sqlConnectionString;
+    private string entityName;
+    private Type entityType;
+
+    private string primaryKeyName;
+    private string primaryKeyType;
+    private bool PKNotIdentity = false;
+
+    public DapperRepository(string sqlConnectionString)
     {
-        private string _sqlConnectionString;
-        private string entityName;
-        private Type entityType;
+        _sqlConnectionString = sqlConnectionString;
+        entityType = typeof(TEntity);
+        entityName = entityType.Name;
 
-        private string primaryKeyName;
-        private string primaryKeyType;
-        private bool PKNotIdentity = false;
-
-        public DapperRepository(string sqlConnectionString)
+        var props = entityType.GetProperties().Where(
+            prop => Attribute.IsDefined(prop,
+            typeof(KeyAttribute)));
+        if (props.Count() > 0)
         {
-            _sqlConnectionString = sqlConnectionString;
-            entityType = typeof(TEntity);
-            entityName = entityType.Name;
+            primaryKeyName = props.First().Name;
+            primaryKeyType = props.First().PropertyType.Name;
+        }
+        else
+        {
+            // Default
+            primaryKeyName = "Id";
+            primaryKeyType = "Int32";
+        }
 
-            var props = entityType.GetProperties().Where(
-                prop => Attribute.IsDefined(prop,
-                typeof(KeyAttribute)));
-            if (props.Count() > 0)
-            {
-                primaryKeyName = props.First().Name;
-                primaryKeyType = props.First().PropertyType.Name;
-            }
-            else
-            {
-                // Default
-                primaryKeyName = "Id";
-                primaryKeyType = "Int32";
-            }
+        // look for [ExplicitKey]
+        props = entityType.GetProperties().Where(
+            prop => Attribute.IsDefined(prop,
+            typeof(ExplicitKeyAttribute)));
+        if (props.Count() > 0)
+        {
+            PKNotIdentity = true;
+            primaryKeyName = props.First().Name;
+            primaryKeyType = props.First().PropertyType.Name;
+        }
+    }
 
-            // look for [ExplicitKey]
-            props = entityType.GetProperties().Where(
-                prop => Attribute.IsDefined(prop,
-                typeof(ExplicitKeyAttribute)));
-            if (props.Count() > 0)
+    public async Task<bool> DeleteAsync(TEntity entityToDelete)
+    {
+        using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+        {
+            //string sql = $"delete from {entityName} where {primaryKeyName}" +
+            //    $" = @{primaryKeyName}";
+            try
             {
-                PKNotIdentity = true;
-                primaryKeyName = props.First().Name;
-                primaryKeyType = props.First().PropertyType.Name;
+                //await db.ExecuteAsync(sql, entityToDelete);
+                await db.DeleteAsync<TEntity>(entityToDelete);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
             }
         }
 
-        public async Task<bool> DeleteAsync(TEntity entityToDelete)
+    }
+
+    public async Task<IEnumerable<TEntity>> GetAsync(string Query)
+    {
+        using (IDbConnection db = new SqlConnection(_sqlConnectionString))
         {
-            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+            try
             {
-                //string sql = $"delete from {entityName} where {primaryKeyName}" +
-                //    $" = @{primaryKeyName}";
-                try
-                {
-                    //await db.ExecuteAsync(sql, entityToDelete);
-                    await db.DeleteAsync<TEntity>(entityToDelete);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    return false;
-                }
+                return await db.QueryAsync<TEntity>(Query);
             }
-
-        }
-
-        public async Task<IEnumerable<TEntity>> GetAsync(string Query)
-        {
-            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+            catch (Exception ex)
             {
-                try
-                {
-                    return await db.QueryAsync<TEntity>(Query);
-                }
-                catch (Exception ex)
-                {
-                    return (IEnumerable<TEntity>)new List<TEntity>();
-                }
+                return (IEnumerable<TEntity>)new List<TEntity>();
             }
         }
+    }
 
-        public async Task<IEnumerable<TEntity>> GetAsync(Expression<Func<TEntity, bool>> 
-            filter = null,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = "")
+    public async Task<IEnumerable<TEntity>> GetAsync(Expression<Func<TEntity, bool>>
+        filter = null,
+        Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+        string includeProperties = "")
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<IEnumerable<TEntity>> GetAllAsync()
+    {
+        using (IDbConnection db = new SqlConnection(_sqlConnectionString))
         {
-            throw new NotImplementedException();
+            db.Open();
+            //string sql = $"select * from {entityName}";
+            //IEnumerable<TEntity> result = await db.QueryAsync<TEntity>(sql);
+            //return result;
+            return await db.GetAllAsync<TEntity>();
         }
+    }
 
-        public async Task<IEnumerable<TEntity>> GetAllAsync()
+    public async Task<TEntity> InsertAsync(TEntity entity)
+    {
+        using (IDbConnection db = new SqlConnection(_sqlConnectionString))
         {
-            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+            db.Open();
+            // start a transaction in case something goes wrong
+            await db.ExecuteAsync("begin transaction");
+            try
             {
-                db.Open();
-                //string sql = $"select * from {entityName}";
-                //IEnumerable<TEntity> result = await db.QueryAsync<TEntity>(sql);
-                //return result;
-                return await db.GetAllAsync<TEntity>();
-            }
-        }
+                // Get the primary key property
+                var prop = entityType.GetProperty(primaryKeyName);
 
-        public async Task<TEntity> InsertAsync(TEntity entity)
-        {
-            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
-            {
-                db.Open();
-                // start a transaction in case something goes wrong
-                await db.ExecuteAsync("begin transaction");
-                try
+                // int key?
+                if (primaryKeyType == "Int32")
                 {
-                    // Get the primary key property
-                    var prop = entityType.GetProperty(primaryKeyName);
-
-                    // int key?
-                    if (primaryKeyType == "Int32")
+                    // not an identity?
+                    if (PKNotIdentity == true)
                     {
-                        // not an identity?
-                        if (PKNotIdentity == true)
-                        {
-                            // get the highest value
-                            var sql = $"select max({primaryKeyName}) from {entityName}";
-                            // and add 1 to it
-                            var Id = Convert.ToInt32(db.ExecuteScalar(sql)) + 1;
-                            // update the entity
-                            prop.SetValue(entity, Id);
-                            // do the insert
-                            db.Insert<TEntity>(entity);
-                        }
-                        else
-                        {
-                            // key will be created by the database
-                            var Id = (int)db.Insert<TEntity>(entity);
-                            // set the value
-                            prop.SetValue(entity, Id);
-                        }
+                        // get the highest value
+                        var sql = $"select max({primaryKeyName}) from {entityName}";
+                        // and add 1 to it
+                        var Id = Convert.ToInt32(db.ExecuteScalar(sql)) + 1;
+                        // update the entity
+                        prop.SetValue(entity, Id);
+                        // do the insert
+                        db.Insert<TEntity>(entity);
                     }
-                    else if (primaryKeyType == "String")
+                    else
                     {
-                        // string primary key. Use my helper
-                        string sql = DapperSqlHelper.GetDapperInsertStatement(entity, entityName);
-                        await db.ExecuteAsync(sql, entity);
+                        // key will be created by the database
+                        var Id = (int)db.Insert<TEntity>(entity);
+                        // set the value
+                        prop.SetValue(entity, Id);
                     }
-                    // if we got here, we're good!
-                    await db.ExecuteAsync("commit transaction");
-                    return entity;
                 }
-                catch (Exception ex)
+                else if (primaryKeyType == "String")
                 {
-                    var msg = ex.Message;
-                    await db.ExecuteAsync("rollback transaction");
-                    return null;
+                    // string primary key. Use my helper
+                    string sql = DapperSqlHelper.GetDapperInsertStatement(entity, entityName);
+                    await db.ExecuteAsync(sql, entity);
                 }
+                // if we got here, we're good!
+                await db.ExecuteAsync("commit transaction");
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message;
+                await db.ExecuteAsync("rollback transaction");
+                return null;
             }
         }
+    }
 
-        public async Task<TEntity> UpdateAsync(TEntity entity)
+    public async Task<TEntity> UpdateAsync(TEntity entity)
+    {
+        using (IDbConnection db = new SqlConnection(_sqlConnectionString))
         {
-            using (IDbConnection db = new SqlConnection(_sqlConnectionString))
+            db.Open();
+            try
             {
-                db.Open();
-                try
-                {
-                    //string sql = DapperSqlHelper.GetDapperUpdateStatement(entity, entityName, primaryKeyName);
-                    //await db.ExecuteAsync(sql, entity);
-                    await db.UpdateAsync<TEntity>(entity);
-                    return entity;
-                }
-                catch (Exception ex)
-                {
-                    return null;
-                }
+                //string sql = DapperSqlHelper.GetDapperUpdateStatement(entity, entityName, primaryKeyName);
+                //await db.ExecuteAsync(sql, entity);
+                await db.UpdateAsync<TEntity>(entity);
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                return null;
             }
         }
     }

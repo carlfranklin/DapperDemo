@@ -1,20 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-
-#nullable disable
-
-namespace DapperDemo.Models
+﻿#nullable disable
+[Table("Artist")]
+public partial class Artist
 {
-    public partial class Artist
-    {
-        public Artist()
-        {
-            Albums = new HashSet<Album>();
-        }
-
-        public int ArtistId { get; set; }
-        public string Name { get; set; }
-
-        public virtual ICollection<Album> Albums { get; set; }
-    }
+    [ExplicitKey]
+    public int ArtistId { get; set; }
+    public string Name { get; set; }
 }

@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#nullable disable
 
-#nullable disable
-
-namespace DapperDemo.Models
+[Table("PlayListTrack")]
+public partial class PlaylistTrack
 {
-    public partial class PlaylistTrack
-    {
-        public int PlaylistId { get; set; }
-        public int TrackId { get; set; }
-
-        public virtual Playlist Playlist { get; set; }
-        public virtual Track Track { get; set; }
-    }
+    [ExplicitKey]
+    public int PlaylistId { get; set; }
+    public int TrackId { get; set; }
 }

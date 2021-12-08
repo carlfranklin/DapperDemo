@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Dapper.Contrib.Extensions;
-
-namespace DapperDemo.Models
+﻿#nullable disable
+[Table("Instrument")]
+public class Instrument
 {
-    [Table("Instrument")]
-    public class Instrument
-    {
-        [Key]
-        public int InstrumentId { get; set; }
+    [Key]
+    public int InstrumentId { get; set; }
 
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }
