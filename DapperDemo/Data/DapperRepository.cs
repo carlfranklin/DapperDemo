@@ -1,14 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
-using Dapper;
-using Dapper.Contrib.Extensions;
-using System.Data;
-
-public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
+﻿public class DapperRepository<TEntity> : IRepository<TEntity> where TEntity : class
 {
     private string _sqlConnectionString;
     private string entityName;

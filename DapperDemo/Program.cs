@@ -1,9 +1,10 @@
 global using System.Data.SqlClient;
 global using Dapper;
 global using Dapper.Contrib.Extensions;
+global using System.Linq.Expressions;
+global using System.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

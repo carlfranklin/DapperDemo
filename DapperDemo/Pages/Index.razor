@@ -132,7 +132,7 @@ else
         //var result = await CustomerManager.GetAll();
 
         // Get Customers that start with B
-        //var result = await CustomerManager.Get("select * from customer where lastname like 'b%' order by lastname");
+        //var result = await CustomerManager.GetAsync("select * from customer where lastname like 'b%' order by lastname");
 
         // Get Customers Sorted by Last Name
         var result = await CustomerManager.GetAsync("select * from customer order by lastname");
@@ -145,5 +145,4 @@ else
     {
         await LoadAllCustomers();
     }
-
 }
